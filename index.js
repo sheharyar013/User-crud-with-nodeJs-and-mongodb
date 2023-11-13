@@ -1,6 +1,8 @@
 const express = require("express");
-// const userData = require("./mock_data/index");
+const bodyParser = require("body-parser");
+
 const app = express();
+app.use(bodyParser.json());
 
 const users = [];
 
@@ -10,28 +12,28 @@ app.get("/api/users", (_, res) => {
   });
 });
 
-// app.post("/api/users", (req, res) => {
-//   const newUser = req.body;
-//   users.push(newUser);
-//   res.json(newUser);
-// });
-
-app.post("/api/users", async (req, res) => {
+app.post("/api/users", (req, res) => {
   try {
     const { username, email } = req.body;
 
-    console.log(username, email);
-
     if (!username || !email) {
-      return res.status(400).json({ error: "Username and email are required" });
+      return res
+        .status(400)
+        .json({ error: "Username and email are required." });
     }
 
-    const newUser = users.push({ username, email });
+    const newUser = {
+      id: users.length + 1,
+      username,
+      email,
+    };
 
-    res.status(201).json(newUser);
+    users.push(newUser);
+
+    return res.status(201).json(newUser);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error creating user:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
