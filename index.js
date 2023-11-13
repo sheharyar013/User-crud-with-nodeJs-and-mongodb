@@ -4,14 +4,9 @@ const app = express();
 
 const users = [];
 
-app.get("/api/users", (req, res) => {
-  const { skip = 0, limit = 10 } = req.query;
-  //   const slicedUsers = userData.users;
+app.get("/api/users", (_, res) => {
   res.json({
     users: users,
-    total: users.total,
-    skip: parseInt(skip),
-    limit: parseInt(limit),
   });
 });
 
@@ -24,6 +19,8 @@ app.get("/api/users", (req, res) => {
 app.post("/api/users", async (req, res) => {
   try {
     const { username, email } = req.body;
+
+    console.log(username, email);
 
     if (!username || !email) {
       return res.status(400).json({ error: "Username and email are required" });
