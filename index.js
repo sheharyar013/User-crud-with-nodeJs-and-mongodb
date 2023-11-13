@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 const app = express();
 app.use(bodyParser.json());
 
-const users = [];
+var users = [];
 
 //user listing
 
@@ -44,9 +44,9 @@ app.post("/api/users", (req, res) => {
 
 app.delete("/api/user/:id", (req, res) => {
   try {
-    const userId = parseInt(req.params.id, 10);
+    let userId = parseInt(req.params.id, 10);
 
-    const userIndex = users.findIndex((user) => user.id === userId);
+    let userIndex = users.findIndex((user) => user.id === userId);
     if (userIndex === -1) {
       throw new Error("User not found");
     }
