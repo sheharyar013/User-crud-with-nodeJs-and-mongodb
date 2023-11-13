@@ -59,6 +59,35 @@ app.delete("/api/user/:id", (req, res) => {
   }
 });
 
+//update user by id
+
+app.put("/api/user/:id", (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { username, email } = req.body;
+
+    let userindex = users.findIndex((user) => user.id === userId);
+
+    if (userindex === -1) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const updatedUser = {
+      id: userId,
+      username: username,
+      email: email,
+    };
+
+    // users[userindex] = updatedUser;
+    users[userindex].username = username;
+    users[userindex].email = email;
+
+    return res.json(users[userindex]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 const server = app.listen(3001, () => {
   console.log("listening on port %s...", server.address().port);
 });
