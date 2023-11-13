@@ -6,11 +6,15 @@ app.use(bodyParser.json());
 
 const users = [];
 
+//user listing
+
 app.get("/api/users", (_, res) => {
   res.json({
     users: users,
   });
 });
+
+//create user
 
 app.post("/api/users", (req, res) => {
   try {
@@ -32,8 +36,26 @@ app.post("/api/users", (req, res) => {
 
     return res.status(201).json(newUser);
   } catch (error) {
-    console.error("Error creating user:", error);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+//delete user by id
+
+app.delete("/api/user/:id", (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+
+    const userIndex = users.findIndex((user) => user.id === userId);
+    if (userIndex === -1) {
+      throw new Error("User not found");
+    }
+
+    users = users.filter((user) => user.id !== userId);
+
+    res.status(200).json({ message: "User is deleted successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
