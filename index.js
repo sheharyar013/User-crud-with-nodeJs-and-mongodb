@@ -1,92 +1,109 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 
 const app = express();
 app.use(bodyParser.json());
 
-var users = [];
+const mongoURI = "mongodb://localhost:27017/Usersdb";
 
-//user listing
+mongoose
+  .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log("MongoDB connected");
+    const userSchema = new mongoose.Schema({
+      username: String,
+      email: String,
+    });
+    const User = mongoose.model("users", userSchema);
 
-app.get("/api/users", (_, res) => {
-  res.json({
-    users: users,
-  });
-});
+    //get user from db
+    app.get("/api/users", async (_, res) => {
+      try {
+        const users = await User.find();
+        res.json(users);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    });
 
-//create user
+    //post user to db
+    app.post("/api/users", async (req, res) => {
+      try {
+        const { username, email } = req.body;
 
-app.post("/api/users", (req, res) => {
-  try {
-    const { username, email } = req.body;
+        if (!username || !email) {
+          return res
+            .status(400)
+            .json({ error: "Username and email are required." });
+        }
 
-    if (!username || !email) {
-      return res
-        .status(400)
-        .json({ error: "Username and email are required." });
-    }
+        const existingUser = await User.findOne({ email });
 
-    const newUser = {
-      id: users.length + 1,
-      username,
-      email,
-    };
+        if (existingUser) {
+          return res.status(400).json({ message: "User already exists" });
+        }
 
-    users.push(newUser);
+        const newUser = new User({ username, email });
 
-    return res.status(201).json(newUser);
-  } catch (error) {
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
+        await newUser.save();
 
-//delete user by id
+        res.status(201).json(newUser);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    });
 
-app.delete("/api/user/:id", (req, res) => {
-  try {
-    let userId = parseInt(req.params.id, 10);
+    //delete user from db
+    app.delete("/api/users/:id", async (req, res) => {
+      try {
+        const userId = req.params.id;
 
-    let userIndex = users.findIndex((user) => user.id === userId);
-    if (userIndex === -1) {
-      throw new Error("User not found");
-    }
+        const user = await User.findById(userId);
 
-    users = users.filter((user) => user.id !== userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
 
-    res.status(200).json({ message: "User is deleted successfully!" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+        // If the user exists, delete them from the database
+        await User.findByIdAndDelete(userId);
 
-//update user by id
+        res.status(200).json({ message: "User deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    });
 
-app.put("/api/user/:id", (req, res) => {
-  try {
-    const userId = parseInt(req.params.id);
-    const { username, email } = req.body;
+    //update user from db
+    app.put("/api/users/:id", async (req, res) => {
+      const userId = req.params.id;
+      const { username, email } = req.body;
 
-    let userindex = users.findIndex((user) => user.id === userId);
+      if (!userId) {
+        return res.status(400).json({ message: "Id is not defined" });
+      }
 
-    if (userindex === -1) {
-      return res.status(404).json({ error: "User not found" });
-    }
+      if (!username || !email) {
+        return res
+          .status(400)
+          .json({ message: "Username and email are required!" });
+      }
 
-    const updatedUser = {
-      id: userId,
-      username: username,
-      email: email,
-    };
+      let user = await User.findById(userId);
 
-    // users[userindex] = updatedUser;
-    users[userindex].username = username;
-    users[userindex].email = email;
+      if (!user) {
+        return res.status(400).json({ message: "User is not defined" });
+      }
 
-    return res.json(users[userindex]);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+      user.username = username;
+      user.email = email;
+
+      user = await user.save();
+
+      res.status(200).json({ message: "User updated successfully", user });
+    });
+  })
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 const server = app.listen(3001, () => {
   console.log("listening on port %s...", server.address().port);
