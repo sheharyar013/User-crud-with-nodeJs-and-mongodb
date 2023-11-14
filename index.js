@@ -7,103 +7,106 @@ app.use(bodyParser.json());
 
 const mongoURI = "mongodb://localhost:27017/Usersdb";
 
-mongoose
-  .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log("MongoDB connected");
-    const userSchema = new mongoose.Schema({
-      username: String,
-      email: String,
-    });
-    const User = mongoose.model("users", userSchema);
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
 
-    //get user from db
-    app.get("/api/users", async (_, res) => {
-      try {
-        const users = await User.find();
-        res.json(users);
-      } catch (error) {
-        res.status(500).json({ message: error.message });
-      }
-    });
+const db = mongoose.connection;
 
-    //post user to db
-    app.post("/api/users", async (req, res) => {
-      try {
-        const { username, email } = req.body;
+db.on("error", console.error.bind(console, "connection error:"));
+db.once("open", function () {
+  console.log("Connected to the database");
+});
 
-        if (!username || !email) {
-          return res
-            .status(400)
-            .json({ error: "Username and email are required." });
-        }
+const userSchema = new mongoose.Schema({
+  username: String,
+  email: String,
+});
+const User = mongoose.model("users", userSchema);
 
-        const existingUser = await User.findOne({ email });
+//get user from db
+app.get("/api/users", async (_, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-        if (existingUser) {
-          return res.status(400).json({ message: "User already exists" });
-        }
+//post user to db
+app.post("/api/users", async (req, res) => {
+  try {
+    const { username, email } = req.body;
 
-        const newUser = new User({ username, email });
+    if (!username || !email) {
+      return res
+        .status(400)
+        .json({ error: "Username and email are required." });
+    }
 
-        await newUser.save();
+    const existingUser = await User.findOne({ email });
 
-        res.status(201).json(newUser);
-      } catch (error) {
-        res.status(500).json({ message: error.message });
-      }
-    });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-    //delete user from db
-    app.delete("/api/users/:id", async (req, res) => {
-      try {
-        const userId = req.params.id;
+    const newUser = new User({ username, email });
 
-        const user = await User.findById(userId);
+    await newUser.save();
 
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-        // If the user exists, delete them from the database
-        await User.findByIdAndDelete(userId);
+//delete user from db
+app.delete("/api/users/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
 
-        res.status(200).json({ message: "User deleted successfully" });
-      } catch (error) {
-        res.status(500).json({ message: error.message });
-      }
-    });
+    const user = await User.findById(userId);
 
-    //update user from db
-    app.put("/api/users/:id", async (req, res) => {
-      const userId = req.params.id;
-      const { username, email } = req.body;
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-      if (!userId) {
-        return res.status(400).json({ message: "Id is not defined" });
-      }
+    // If the user exists, delete them from the database
+    await User.findByIdAndDelete(userId);
 
-      if (!username || !email) {
-        return res
-          .status(400)
-          .json({ message: "Username and email are required!" });
-      }
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-      let user = await User.findById(userId);
+//update user from db
+app.put("/api/users/:id", async (req, res) => {
+  const userId = req.params.id;
+  const { username, email } = req.body;
 
-      if (!user) {
-        return res.status(400).json({ message: "User is not defined" });
-      }
+  if (!userId) {
+    return res.status(400).json({ message: "Id is not defined" });
+  }
 
-      user.username = username;
-      user.email = email;
+  if (!username || !email) {
+    return res
+      .status(400)
+      .json({ message: "Username and email are required!" });
+  }
 
-      user = await user.save();
+  let user = await User.findById(userId);
 
-      res.status(200).json({ message: "User updated successfully", user });
-    });
-  })
-  .catch((err) => console.error("MongoDB connection error:", err));
+  if (!user) {
+    return res.status(400).json({ message: "User is not defined" });
+  }
+
+  user.username = username;
+  user.email = email;
+
+  user = await user.save();
+
+  res.status(200).json({ message: "User updated successfully", user });
+});
 
 const server = app.listen(3001, () => {
   console.log("listening on port %s...", server.address().port);
